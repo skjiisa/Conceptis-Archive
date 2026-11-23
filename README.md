@@ -11,7 +11,8 @@ If I have time I'll archive the non-art apps (Sudoku, Tic-Tac-Logic, etc.).
 ## Adding a week
 
 Each week is a folder at `<App>/<YYYY-MM-DD>/` (the date the weekly bonus came out, a Friday) holding `info.png`, `puzzle.png` and `complete.png`.
-Only the images need adding: on every push to `main`, a GitHub Action runs `scripts/build.py`, which writes every `README.md` in the repo.
+Only the images need adding, through a pull request: a GitHub Action compresses the new images and runs `scripts/build.py`, which writes every `README.md` in the repo, then commits both to the PR branch.
+Squash-merge the PR so `main`'s history only holds the compressed images.
 Run `python3 scripts/build.py` yourself to preview the result locally.
 
 See [docs/importing.md](docs/importing.md) for the iOS Shortcut that imports screenshots through Working Copy.
