@@ -1,10 +1,20 @@
-name: Build indexes
+name: Build archive
 
-# Regenerates every README.md from the folder contents after each push, so
-# uploads (e.g. from the iOS Shortcut) only need to add images.
+# Uploads (e.g. from the iOS Shortcut) only need to add images; this workflow
+# writes every README.md from the folder contents.
+#
+# On a pull request it also compresses the new PNGs (to a color palette when
+# that looks the same, otherwise to 8 bits per channel) and commits the result
+# to the PR branch. Squash-merge the PR and delete the branch, and
+# main's history only ever holds the compressed images, so clones never
+# download the originals. Compressing after the images reach main would keep
+# both copies in history forever, so pushes to main only regenerate Markdown.
+#
 # Pushes made with GITHUB_TOKEN don't trigger workflows, so this can't loop.
 
 on:
+  pull_request:
+    branches: [main]
   push:
     branches: [main]
   workflow_dispatch:
@@ -13,11 +23,72 @@ permissions:
   contents: write
 
 concurrency:
-  group: build-indexes
+  group: build-${{ github.head_ref || github.ref }}
   cancel-in-progress: false
 
+env:
+  BOT_NAME: github-actions[bot]
+  BOT_EMAIL: 41898283+github-actions[bot]@users.noreply.github.com
+
 jobs:
-  build:
+  pull-request:
+    # GITHUB_TOKEN can't push to branches in forks, so only same-repo PRs.
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    env:
+      HEAD_REF: ${{ github.head_ref }}
+      BASE_REF: ${{ github.base_ref }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Install image tools
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq pngquant optipng imagemagick
+
+      - name: Compress images added or changed in this PR
+        # Each image becomes a 256-color palette PNG (no dithering) if
+        # pngquant can do that at quality 95+, which covers screenshots of
+        # flat pixel art. Images with smooth gradients, like the blurred art
+        # behind the info dialog, fail that bar and would band, so they're
+        # reduced to 8 bits per channel instead. optipng then recompresses
+        # either result losslessly. Running this again on an already
+        # compressed image leaves it essentially unchanged.
+        run: |
+          compress() {
+            local f="$1" status=0
+            pngquant --quality=95-100 --nofs --speed 1 --skip-if-larger --force --ext .png -- "$f" || status=$?
+            case "$status" in
+              0) echo "palette: $f" ;;
+              98|99) convert "$f" -depth 8 "$f"; echo "8-bit:   $f" ;;
+              *) echo "pngquant failed on $f (exit $status)"; return "$status" ;;
+            esac
+            optipng -quiet -o2 "$f"
+          }
+          while IFS= read -r -d '' f; do
+            compress "$f"
+          done < <(git diff --name-only -z --diff-filter=AM "origin/$BASE_REF...HEAD" -- ':(icase)*.png')
+
+      - name: Generate Markdown
+        run: python3 scripts/build.py
+
+      - name: Commit to the PR branch
+        run: |
+          git add -A -- '*.md' ':(icase)*.png'
+          if git diff --cached --quiet; then
+            echo "Nothing to update."
+            exit 0
+          fi
+          git config user.name "$BOT_NAME"
+          git config user.email "$BOT_EMAIL"
+          git commit -m "Compress images and regenerate indexes"
+          git push origin "HEAD:$HEAD_REF"
+
+  main:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -32,8 +103,8 @@ jobs:
             echo "Nothing to update."
             exit 0
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git config user.name "$BOT_NAME"
+          git config user.email "$BOT_EMAIL"
           git commit -m "Regenerate indexes"
           # Another push may have landed while this ran.
           git pull --rebase origin main

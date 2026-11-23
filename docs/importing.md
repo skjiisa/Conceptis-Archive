@@ -1,7 +1,8 @@
 # Importing screenshots from iOS
 
-The Shortcut only has to put three images in the right folder and push.
-The GitHub Action writes all the Markdown afterwards (see `.github/workflows/build.yml`).
+The Shortcut only has to put three images in the right folder on a new branch and open a pull request.
+The GitHub Action then compresses the images and writes all the Markdown on that branch (see `.github/workflows/build.yml`).
+Squash-merge the PR and delete the branch, so the uncompressed originals never reach `main`'s history.
 
 ## What a week needs
 
@@ -19,15 +20,18 @@ If a week needs a written note, add `notes.md` to its folder and it will be show
 
 An iCloud link to the Shortcut will be shared here later.
 
-After a push, the GitHub Action takes about a minute to update the Markdown; the new week then appears at the top of `<App>/README.md`.
+About a minute after the PR is opened, the Action adds a "Compress images and regenerate indexes" commit to it; check the new week's page there before merging.
 
 ## Adding a week from a computer
 
-Copy the images into the folder with the names above, then:
+Copy the images into the folder with the names above, then open a pull request the same way:
 
 ```sh
-python3 scripts/build.py   # optional: the Action does this after you push
+git switch -c <YYYY-MM-DD> origin/main
 git add <App>/<YYYY-MM-DD>
 git commit -m "Add <App> <YYYY-MM-DD>"
-git push
+git push -u origin <YYYY-MM-DD>
+gh pr create --fill
 ```
+
+Pushing straight to `main` still regenerates the Markdown, but skips compression, since compressing after the fact would leave both copies in history.
