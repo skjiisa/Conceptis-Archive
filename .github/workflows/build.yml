@@ -1,0 +1,40 @@
+name: Build indexes
+
+# Regenerates every README.md from the folder contents after each push, so
+# uploads (e.g. from the iOS Shortcut) only need to add images.
+# Pushes made with GITHUB_TOKEN don't trigger workflows, so this can't loop.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-indexes
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate Markdown
+        run: python3 scripts/build.py
+
+      - name: Commit changes
+        run: |
+          git add -A -- '*.md'
+          if git diff --cached --quiet; then
+            echo "Nothing to update."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Regenerate indexes"
+          # Another push may have landed while this ran.
+          git pull --rebase origin main
+          git push origin HEAD:main
