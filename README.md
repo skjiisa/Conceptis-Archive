@@ -24,5 +24,5 @@ See [docs/importing.md](docs/importing.md) for the iOS Shortcut that imports scr
 
 | App | Weeks | Latest |
 | --- | --- | --- |
-| [Link-a-Pix](Link-a-Pix/) | 10 | [2022-05-20](Link-a-Pix/2022-05-20/) |
+| [Link-a-Pix](Link-a-Pix/) | 11 | [2026-10-30](Link-a-Pix/2026-10-30/) |
 <!-- archive:end -->

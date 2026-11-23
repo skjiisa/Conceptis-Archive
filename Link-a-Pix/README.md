@@ -2,7 +2,15 @@
 
 # Link-a-Pix
 
-10 weeks archived. [Back to the archive](../)
+11 weeks archived. [Back to the archive](../)
+
+## 2026
+
+<table>
+<tr>
+<td align="center"><a href="2026-10-30/"><img src="2026-10-30/complete.png" width="160" alt="Link-a-Pix 2026-10-30"><br>2026-10-30</a></td>
+</tr>
+</table>
 
 ## 2022
 
